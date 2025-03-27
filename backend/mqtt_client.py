@@ -1,7 +1,7 @@
 import paho.mqtt.client as mqtt
 import json
 import logging
-from config import MQTT_BROKER, MQTT_PORT, MQTT_TOPICS
+from backend.config import MQTT_BROKER, MQTT_PORT, MQTT_TOPICS
 from database import write_mining_data
 from safety_calculator import SafetyCalculator
 

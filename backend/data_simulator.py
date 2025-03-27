@@ -1,7 +1,7 @@
 import random
 import time
 import paho.mqtt.client as mqtt
-from config import MQTT_BROKER, MQTT_PORT, MQTT_TOPICS
+from backend.config import MQTT_BROKER, MQTT_PORT, MQTT_TOPICS
 
 
 class DataSimulator:
