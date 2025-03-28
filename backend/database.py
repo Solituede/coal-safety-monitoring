@@ -14,6 +14,7 @@ def write_mining_data(data):
         .field("airflow", data["airflow"]) \
         .field("gas_concentration", data["gas_concentration"]) \
         .field("safe_speed", data["safe_speed"]) \
+        .field("gas_emission", data["gas_emission"]) \
         .time(time.time_ns(), WritePrecision.NS)
     write_api.write(bucket=INFLUXDB_BUCKET, org=INFLUXDB_ORG, record=point)
 
