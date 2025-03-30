@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>矿山智能监控系统</title>
+    <style>
+        :root {
+            --primary-blue: #2A8CFF;
+            --alert-red: #FF003C;
+            --safe-green: #4CAF50;
+            --text-primary: #E0F2FE;
+            --gas-orange: #FFA726;
+            --diff-purple: #BC13FE;
+            --bg-gradient-start: #000b15;
+            --bg-gradient-end: #000;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+            font-family: 'Microsoft YaHei', sans-serif;
+            color: var(--text-primary);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .dashboard {
+            width: 95%;
+            max-width: 1440px;
+            margin: 1rem auto;
+            background: rgba(0, 20, 40, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 100, 255, 0.15);
+            position: relative;
+            z-index: 1;
+        }
+
+        .chart-container {
+            height: 400px;
+            padding: 20px;
+        }
+
+        .data-table {
+            background: rgba(0, 30, 60, 0.8);
+            border-radius: 8px;
+            margin: 1rem;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        th {
+            background: rgba(0, 80, 160, 0.6);
+        }
+
+        .alert-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 40px;
+            background: rgba(255, 0, 60, 0.9);
+            border-radius: 12px;
+            display: none;
+            animation: alertPulse 0.5s infinite;
+            border: 2px solid white;
+            box-shadow: 0 0 30px var(--alert-red);
+            z-index: 999;
+        }
+
+        .threshold-info {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            background: rgba(0, 40, 80, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        @keyframes alertPulse {
+            0% {
+                transform: translate(-50%, -50%) scale(1);
+            }
+
+            50% {
+                transform: translate(-50%, -50%) scale(1.1);
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        .meteor {
+            position: absolute;
+            width: 200px;
+            height: 2px;
+            background: linear-gradient(90deg,
+                    rgba(255, 255, 255, 0),
+                    rgba(255, 255, 255, 0.8),
+                    rgba(255, 255, 255, 0));
+            animation: meteorFall 1s linear forwards;
+        }
+
+        @keyframes meteorFall {
+            0% {
+                transform: translateX(-100%);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateX(200%);
+                opacity: 0;
+            }
+        }
+
+        .info-box {
+            background: rgba(0, 40, 80, 0.5);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .info-box-title {
+            color: #7FDBFF;
+            font-size: 16px;
+        }
+
+        .info-box-value {
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .history-button {
+            cursor: pointer;
+        }
+
+        .history-popup {
+            position: fixed;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 40px 60px;
+            background: rgba(0, 40, 80, 0.9);
+            border-radius: 12px;
+            display: none;
+            border: 2px solid white;
+            box-shadow: 0 0 30px var(--primary-blue);
+            z-index: 999;
+            width: 80%;
+            max-width: 1000px;
+            height: auto;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard">
+        <div style="padding: 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.2);">
+            <h1 style="margin:0;">🏭 矿山智能监控系统</h1>
+            <div class="threshold-info">
+                当前安全阈值: <span id="safeSpeed">3.2</span> m/min
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="mainChart"></canvas>
+        </div>
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; padding: 20px;">
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <div class="info-box">
+                    <div class="info-box-title">实时割煤速度</div>
+                    <div class="info-box-value">
+                        <span id="currentSpeed">0.00</span> m/min
+                    </div>
+                </div>
+                <div class="info-box">
+                    <div class="info-box-title">瓦斯浓度</div>
+                    <div class="info-box-value">
+                        <span id="gasConcentration">0.00</span> %
+                    </div>
+                </div>
+                <div class="info-box history-button" id="historyButton">
+                    <div class="info-box-title">查看历史</div>
+                    <div class="info-box-value">📜</div>
+                </div>
+            </div>
+            <div class="data-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>割煤速度</th>
+                            <th>割煤状态</th>
+                            <th>瓦斯浓度</th>
+                            <th>瓦斯状态</th>
+                            <th>安全阈值</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="alert-panel" id="alertPanel">
+        ⚠️ 安全警报：检测到瓦斯异常
+    </div>
+    <div class="history-popup" id="historyPopup">
+        <h2>历史记录</h2>
+        <div class="data-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>时间</th>
+                        <th>割煤速度</th>
+                        <th>割煤状态</th>
+                        <th>瓦斯浓度</th>
+                        <th>瓦斯状态</th>
+                        <th>安全阈值</th>
+                        <th>抽采量</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody"></tbody>
+            </table>
+        </div>
+        <button onclick="closeHistoryPopup()">关闭</button>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        class MonitoringSystem {
+            constructor() {
+                this.initChart();
+                this.initMeteors();
+                this.safeSpeed = 3.2;
+                this.currentSpeed = null;
+                this.gasConcentration = null;
+                this.gasEmission = null;
+                this.airflow = null;
+                this.extraction = null;
+                this.historyData = [];
+                setInterval(() => this.updateData(), 5000);
+                document.getElementById('historyButton').addEventListener('click', this.showHistoryPopup.bind(this));
+            }
+
+            initChart() {
+                this.chart = new Chart(document.getElementById('mainChart'), {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            {
+                                label: '割煤速度',
+                                data: [],
+                                borderColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-blue'),
+                                tension: 0.3,
+                                fill: true,
+                                backgroundColor: 'rgba(42, 140, 255, 0.1)'
+                            },
+                            {
+                                label: '安全阈值',
+                                data: [],
+                                borderColor: getComputedStyle(document.documentElement).getPropertyValue('--safe-green'),
+                                borderDash: [8, 4],
+                                pointRadius: 0
+                            },
+                            {
+                                label: '实时瓦斯浓度',
+                                data: [],
+                                borderColor: getComputedStyle(document.documentElement).getPropertyValue('--alert-red'),
+                                tension: 0.3,
+                                fill: true,
+                                backgroundColor: 'rgba(255, 0, 60, 0.1)'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-primary') }
+                            }
+                        },
+                        scales: {
+                            x: { grid: { color: 'rgba(255, 255, 255, 0.1)' } },
+                            y: {
+                                title: { text: '速度 (m/min)' },
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                            }
+                        }
+                    }
+                });
+            }
+
+            initMeteors() {
+                setInterval(() => {
+                    const meteor = document.createElement('div');
+                    meteor.className = 'meteor';
+                    meteor.style.left = `${Math.random() * 120}%`;
+                    meteor.style.top = `${Math.random() * 100}%`;
+                    meteor.style.animationDuration = `${Math.random() * 0.5 + 0.3}s`;
+                    meteor.addEventListener('animationend', () => meteor.remove());
+                    document.body.appendChild(meteor);
+                }, 100);
+            }
+
+            updateData() {
+                // 获取主页面数据
+                fetch('/api/real-time')
+                   .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                   .then(data => {
+                        if (data.message) {
+                            console.error(data.message);
+                            return;
+                        }
+                        this.currentSpeed = data.current_speed;
+                        this.gasConcentration = data.gas_concentration;
+                        this.gasEmission = data.gas_emission;
+                        this.airflow = data.airflow;
+                        const timestamp = new Date();
+                        const coalCuttingStatus = this.currentSpeed > this.safeSpeed ? '异常' : '正常';
+                        const gasStatus = (this.gasConcentration > 1 || this.gasEmission > (this.airflow * 0.01)) ? '异常' : '正常';
+                        this.updateChart(timestamp.toLocaleTimeString());
+                        this.updateDataTable(timestamp.toLocaleTimeString(), coalCuttingStatus, gasStatus);
+                        this.handleAlert();
+                        document.getElementById('currentSpeed').textContent = this.currentSpeed.toFixed(2);
+                        document.getElementById('gasConcentration').textContent = this.gasConcentration.toFixed(2);
+                        document.getElementById('safeSpeed').textContent = this.safeSpeed.toFixed(2);
+                        // 获取历史记录数据
+                        fetch('/api/safety-status')
+                           .then(response => {
+                                if (!response.ok) {
+                                    throw new Error('Network response was not ok');
+                                }
+                                return response.json();
+                            })
+                           .then(historyData => {
+                                if (historyData.message) {
+                                    console.error(historyData.message);
+                                    return;
+                                }
+                                this.safeSpeed = historyData.safe_speed;
+                                this.extraction = historyData.extraction;
+                                this.saveHistoryData(timestamp, coalCuttingStatus, gasStatus);
+                                this.filterHistoryData();
+                            })
+                           .catch(error => {
+                                console.error('Error fetching history data:', error);
+                            });
+                    })
+                   .catch(error => {
+                        console.error('Error fetching main data:', error);
+                    });
+            }
+
+            updateChart(timestamp) {
+                this.chart.data.labels.push(timestamp);
+                this.chart.data.datasets[0].data.push(this.currentSpeed);
+                this.chart.data.datasets[2].data.push(this.gasConcentration);
+                if (this.chart.data.labels.length > 20) {
+                    this.chart.data.labels.shift();
+                    this.chart.data.datasets.forEach(d => d.data.shift());
+                }
+                this.updateThresholdLine();
+                this.chart.update();
+            }
+
+            updateThresholdLine() {
+                const currentThreshold = this.safeSpeed;
+                const newThresholdData = new Array(this.chart.data.labels.length).fill(currentThreshold);
+                this.chart.data.datasets[1].data = newThresholdData;
+            }
+
+            updateDataTable(timestamp, coalCuttingStatus, gasStatus) {
+                const tableBody = document.getElementById('dataTableBody');
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${timestamp}</td>
+                    <td>${this.currentSpeed.toFixed(2)}</td>
+                    <td>${coalCuttingStatus}</td>
+                    <td>${this.gasConcentration.toFixed(2)}</td>
+                    <td>${gasStatus}</td>
+                    <td>${this.safeSpeed.toFixed(2)}</td>
+                `;
+                tableBody.prepend(row);
+                // 只保留最新的10条记录
+                while (tableBody.children.length > 10) {
+                    tableBody.removeChild(tableBody.lastChild);
+                }
+            }
+
+            saveHistoryData(timestamp, coalCuttingStatus, gasStatus) {
+                this.historyData.push({
+                    timestamp: timestamp,
+                    currentSpeed: this.currentSpeed,
+                    coalCuttingStatus: coalCuttingStatus,
+                    gasConcentration: this.gasConcentration,
+                    gasStatus: gasStatus,
+                    safeSpeed: this.safeSpeed,
+                    extraction: this.extraction
+                });
+            }
+
+            filterHistoryData() {
+                const oneHourAgo = new Date();
+                oneHourAgo.setHours(oneHourAgo.getHours() - 1);
+                this.historyData = this.historyData.filter(item => item.timestamp >= oneHourAgo);
+            }
+
+            showHistoryPopup() {
+                const historyTableBody = document.getElementById('historyTableBody');
+                historyTableBody.innerHTML = '';
+                this.historyData.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.timestamp.toLocaleTimeString()}</td>
+                        <td>${item.currentSpeed.toFixed(2)}</td>
+                        <td>${item.coalCuttingStatus}</td>
+                        <td>${item.gasConcentration.toFixed(2)}</td>
+                        <td>${item.gasStatus}</td>
+                        <td>${item.safeSpeed.toFixed(2)}</td>
+                        <td>${item.extraction ? item.extraction.toFixed(2) : 'N/A'}</td>
+                    `;
+                    historyTableBody.appendChild(row);
+                });
+                document.getElementById('historyPopup').style.display = 'block';
+            }
+
+            handleAlert() {
+                const alertPanel = document.getElementById('alertPanel');
+                if (this.gasConcentration > 1 || this.gasEmission > (this.airflow * 0.01)) {
+                    alertPanel.style.display = 'block';
+                    setTimeout(() => {
+                        alertPanel.style.display = 'none';
+                    }, 5000);
+                } else {
+                    alertPanel.style.display = 'none';
+                }
+            }
+        }
+
+        function closeHistoryPopup() {
+            document.getElementById('historyPopup').style.display = 'none';
+        }
+
+        const system = new MonitoringSystem();
+    </script>
+</body>
+
+</html>    

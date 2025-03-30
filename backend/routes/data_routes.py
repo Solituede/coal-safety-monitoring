@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from database import read_historical_data
+from ..database import read_historical_data
 
 router = APIRouter()
 

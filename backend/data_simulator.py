@@ -1,6 +1,7 @@
 import random
 import time
 import paho.mqtt.client as mqtt
+import json
 from backend.config import MQTT_BROKER, MQTT_PORT, MQTT_TOPICS
 
 
