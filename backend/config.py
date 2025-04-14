@@ -1,6 +1,6 @@
 # 数据库配置
-INFLUXDB_URL = "http://localhost:8086"
-INFLUXDB_TOKEN = "docker-compose down"
+INFLUXDB_URL = "http://host.docker.internal:8086"
+INFLUXDB_TOKEN = "lVTN7VF0jvRt5PB2Ub6z4kEbkUc5qaXrB-sKzwuX-EZoOTJPscDj1jahy4i8lQ9jRJB-8fXcZ2753hz7nhgn6A=="
 INFLUXDB_ORG = "xiankejidaxue"
 INFLUXDB_BUCKET = "wasi"
 
